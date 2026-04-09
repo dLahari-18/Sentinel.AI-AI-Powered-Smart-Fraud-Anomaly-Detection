@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel.ai - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0f1c;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .login-container {
+            background: #111827;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.5);
+            width: 420px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            font-size: 36px;
+            font-weight: 800;
+            color: #3b82f6;
+        }
+        .logo p {
+            color: #e5e7eb;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        .alert {
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.2);
+            border-left: 4px solid #ef4444;
+            color: #fca5a5;
+        }
+        .alert-success {
+            background: rgba(34, 197, 94, 0.2);
+            border-left: 4px solid #22c55e;
+            color: #86efac;
+        }
+        .alert-info {
+            background: rgba(59, 130, 246, 0.2);
+            border-left: 4px solid #3b82f6;
+            color: #93c5fd;
+        }
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            margin: 10px 0;
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            color: #e5e7eb;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #3b82f6, #a855f7);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(59, 130, 246, 0.4);
+        }
+        .info {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            background: #1f2937;
+            padding: 12px;
+            border-radius: 12px;
+            color: #9ca3af;
+        }
+        .info strong {
+            color: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1>🛡️ Sentinel.ai</h1>
+            <p>Behavior-Based Anomaly Detection</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="/auth">
+            <input type="text" name="username" placeholder="Username" required autofocus>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+
+        <div class="info">
+            <strong>Demo Credentials:</strong><br>
+            admin / sentinel123 &nbsp;|&nbsp; analyst / risk2024 &nbsp;|&nbsp; viewer / view123
+        </div>
+    </div>
+</body>
+</html>
