@@ -1,4 +1,4 @@
-import os  # <-- THIS WAS MISSING
+import os
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, Response
 import random
 import math
@@ -7,7 +7,7 @@ import io
 import traceback
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'sentinel-ai-secret-key-2024')  # now works
+app.secret_key = os.environ.get('SECRET_KEY', 'sentinel-ai-secret-key-2024')
 
 # ---------- User database ----------
 users = {
@@ -16,7 +16,7 @@ users = {
     'viewer': {'password': 'view123', 'role': 'Viewer'}
 }
 
-# ---------- In-memory dataset ----------
+# ---------- In-memory dataset (50 users) ----------
 def generate_dataset():
     locations = ['Nellore', 'Hyderabad', 'Mumbai', 'Delhi', 'Bangalore', 'Chennai']
     devices = ['mobile', 'laptop', 'desktop']
@@ -51,7 +51,7 @@ def generate_dataset():
 
 df = generate_dataset()
 
-# ---------- Helper functions ----------
+# ---------- Helper: get user baseline ----------
 def get_user_baseline(user_id):
     rows = [r for r in df if r['user_id'] == user_id]
     if not rows:
@@ -81,6 +81,7 @@ def get_user_baseline(user_id):
         'std_login_attempts': std_attempts,
     }
 
+# ---------- Risk calculation with detailed explanation ----------
 def calculate_risk_and_explanation(user_id, screen_time, location, device, login_attempts):
     base = get_user_baseline(user_id)
     if base is None:
@@ -89,23 +90,37 @@ def calculate_risk_and_explanation(user_id, screen_time, location, device, login
     risk = 0
     reasons = []
 
-    time_thresh = base['mean_screen_time'] + base['std_screen_time'] * 1.2
-    if screen_time > time_thresh:
+    mean_t = base['mean_screen_time']
+    std_t = base['std_screen_time']
+    threshold_t = mean_t + std_t * 1.2
+    if screen_time > threshold_t:
         risk += 20
-        reasons.append(f"⏰ Session duration unusually high ({screen_time}h vs normal {base['mean_screen_time']:.1f}h)")
+        reasons.append(f"⏰ Session duration unusually high: your value = {screen_time}h, baseline = {mean_t:.1f}h ± {std_t:.1f}h, threshold = {threshold_t:.1f}h → +20 risk")
+    else:
+        reasons.append(f"✓ Session duration normal: {screen_time}h vs baseline {mean_t:.1f}h (threshold {threshold_t:.1f}h)")
 
-    if location != base['common_location']:
+    usual_loc = base['common_location']
+    if location != usual_loc:
         risk += 30
-        reasons.append(f"📍 Location changed from usual ({base['common_location']} to {location})")
+        reasons.append(f"📍 Location changed: from usual '{usual_loc}' to '{location}' → +30 risk")
+    else:
+        reasons.append(f"✓ Location matches usual: {location}")
 
-    if device not in base['known_devices']:
+    known_devs = base['known_devices']
+    if device not in known_devs:
         risk += 15
-        reasons.append(f"💻 New device detected ({device}) - not in usual devices")
+        reasons.append(f"💻 New device: '{device}' not in usual devices {known_devs} → +15 risk")
+    else:
+        reasons.append(f"✓ Device '{device}' is known")
 
-    attempts_thresh = base['mean_login_attempts'] + base['std_login_attempts']
-    if login_attempts > attempts_thresh:
+    mean_a = base['mean_login_attempts']
+    std_a = base['std_login_attempts']
+    threshold_a = mean_a + std_a
+    if login_attempts > threshold_a:
         risk += 20
-        reasons.append(f"🔐 Multiple login attempts ({login_attempts} vs normal {base['mean_login_attempts']:.1f})")
+        reasons.append(f"🔐 Multiple login attempts: {login_attempts} vs baseline {mean_a:.1f}±{std_a:.1f}, threshold {threshold_a:.1f} → +20 risk")
+    else:
+        reasons.append(f"✓ Login attempts normal: {login_attempts} (baseline {mean_a:.1f})")
 
     risk = min(risk, 100)
 
@@ -116,9 +131,7 @@ def calculate_risk_and_explanation(user_id, screen_time, location, device, login
     else:
         status, icon = "Blocked", "❌"
 
-    if not reasons:
-        reasons.append("✓ All behaviors match normal patterns")
-
+    reasons.insert(0, f"**Total Risk Score: {risk}/100**")
     return {
         'risk_score': risk,
         'status': status,
@@ -127,6 +140,87 @@ def calculate_risk_and_explanation(user_id, screen_time, location, device, login
         'user_id': user_id
     }, None
 
+# ---------- Performance Metrics (Accuracy, Precision, Recall, F1, Confusion Matrix, False Positive Rate) ----------
+def get_performance_metrics():
+    """
+    Evaluate the rule-based model against ground truth.
+    Returns a dict with all metrics.
+    """
+    random.seed(42)  # reproducibility
+    locations = ['Nellore', 'Hyderabad', 'Mumbai', 'Delhi', 'Bangalore', 'Chennai']
+    devices = ['mobile', 'laptop', 'desktop']
+    unusual_locations = ['New York', 'London', 'Tokyo', 'Sydney']
+    unusual_devices = ['tablet', 'unknown_device']
+
+    y_true = []  # 1 = anomalous, 0 = normal
+    y_pred = []  # 1 = predicted anomalous (risk >= 30)
+
+    for user_id in range(1, 51):
+        home_location = random.choice(locations)
+        usual_device = random.choice(devices)
+        usual_time = round(random.uniform(1, 4), 1)
+        usual_attempts = random.randint(1, 2)
+        num_sessions = random.randint(3, 6)
+        for _ in range(num_sessions):
+            is_anomaly = (random.random() < 0.1)
+            if not is_anomaly:
+                screen_time = round(usual_time + random.gauss(0, 0.5), 1)
+                location = home_location
+                device = usual_device
+                login_attempts = usual_attempts + random.randint(0, 1)
+            else:
+                screen_time = round(usual_time + random.uniform(3, 6), 1)
+                location = random.choice(unusual_locations)
+                device = random.choice(unusual_devices)
+                login_attempts = usual_attempts + random.randint(2, 4)
+
+            # Compute risk using the existing baseline
+            base = get_user_baseline(user_id)
+            if base is None:
+                risk = 0
+            else:
+                risk = 0
+                if screen_time > base['mean_screen_time'] + base['std_screen_time'] * 1.2:
+                    risk += 20
+                if location != base['common_location']:
+                    risk += 30
+                if device not in base['known_devices']:
+                    risk += 15
+                if login_attempts > base['mean_login_attempts'] + base['std_login_attempts']:
+                    risk += 20
+                risk = min(risk, 100)
+
+            predicted_anomaly = 1 if risk >= 30 else 0
+            y_true.append(1 if is_anomaly else 0)
+            y_pred.append(predicted_anomaly)
+
+    # Confusion matrix
+    tp = sum(1 for i in range(len(y_true)) if y_true[i]==1 and y_pred[i]==1)
+    tn = sum(1 for i in range(len(y_true)) if y_true[i]==0 and y_pred[i]==0)
+    fp = sum(1 for i in range(len(y_true)) if y_true[i]==0 and y_pred[i]==1)
+    fn = sum(1 for i in range(len(y_true)) if y_true[i]==1 and y_pred[i]==0)
+
+    total = tp + tn + fp + fn
+    accuracy = (tp + tn) / total if total > 0 else 0
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    false_positive_rate = fp / (fp + tn) if (fp + tn) > 0 else 0  # threat rate / false alarm rate
+
+    return {
+        'accuracy': round(accuracy, 4),
+        'precision': round(precision, 4),
+        'recall': round(recall, 4),
+        'f1_score': round(f1, 4),
+        'true_positives': tp,
+        'true_negatives': tn,
+        'false_positives': fp,
+        'false_negatives': fn,
+        'false_positive_rate': round(false_positive_rate, 4),
+        'total_samples': total
+    }
+
+# ---------- Aggregate all users' risk ----------
 def get_all_users_risk():
     users_risk = {}
     for uid in set(r['user_id'] for r in df):
@@ -157,7 +251,7 @@ def get_overall_metrics():
         'blocked_count': counts['Blocked']
     }
 
-# ---------- Flask routes ----------
+# ---------- Flask Routes ----------
 @app.route('/')
 def login():
     if 'username' in session:
@@ -205,6 +299,10 @@ def detect_anomaly():
         )
         if err:
             return jsonify({'error': err}), 400
+
+        # Attach performance metrics
+        perf = get_performance_metrics()
+        result['performance'] = perf
         return jsonify(result)
     except Exception as e:
         print(traceback.format_exc())
