@@ -7,7 +7,7 @@ from collections import defaultdict
 import io
 
 app = Flask(__name__)
-app.secret_key = 'your-secure-secret-key-change-this'
+app.secret_key = os.environ.get('SECRET_KEY', 'fallback-secret-key')
 
 # ========== REAL USER DATABASE ==========
 users = {
