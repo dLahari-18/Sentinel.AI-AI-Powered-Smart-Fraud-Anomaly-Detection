@@ -1,0 +1,13 @@
+user_id,screen_time,location,device,login_attempts
+1,2,Nellore,mobile,1
+1,2.5,Nellore,mobile,1
+1,3,Nellore,laptop,1
+1,2,Nellore,mobile,2
+2,5,Hyderabad,laptop,1
+2,4,Hyderabad,laptop,2
+2,6,Hyderabad,laptop,1
+3,1,Nellore,mobile,1
+3,2,Nellore,mobile,1
+3,1.5,Nellore,mobile,2
+4,8,Mumbai,desktop,3
+4,7,Mumbai,desktop,1
