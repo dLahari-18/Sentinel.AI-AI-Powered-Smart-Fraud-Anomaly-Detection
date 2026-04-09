@@ -6,7 +6,7 @@ import io
 import traceback
 
 app = Flask(__name__)
-app.secret_key = 'sentinel-ai-secret-key-2024'
+app.secret_key = os.environ.get('SECRET_KEY', 'fallback-secret-key')
 
 # ---------- User database ----------
 users = {
