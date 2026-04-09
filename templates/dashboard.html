@@ -16,7 +16,6 @@
         .container { max-width: 1400px; margin: 0 auto; }
         h1 { font-size: 36px; font-weight: 800; color: #3b82f6; }
         h2 { font-size: 26px; font-weight: 700; color: #a855f7; margin-bottom: 20px; }
-        h3 { font-size: 20px; font-weight: 600; color: #e5e7eb; margin-bottom: 15px; }
         .header {
             display: flex; justify-content: space-between; align-items: center;
             flex-wrap: wrap; gap: 15px; background: #111827; padding: 20px 25px;
@@ -38,6 +37,7 @@
             border: 1px solid rgba(59,130,246,0.2); transition: all 0.3s;
         }
         .card:hover { transform: translateY(-5px); border-color: #3b82f6; }
+        .card-title { font-size: 14px; color: #9ca3af; margin-bottom: 8px; }
         .card-value { font-size: 32px; font-weight: bold; color: #3b82f6; margin-top: 8px; }
         .two-columns {
             display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;
@@ -53,16 +53,15 @@
             border: 1px solid #374151; border-radius: 12px; color: #e5e7eb;
             font-size: 14px;
         }
-        input:focus, select:focus { outline: none; border-color: #3b82f6; }
         .detect-btn {
             width: 100%; padding: 12px; background: linear-gradient(135deg, #3b82f6, #a855f7);
             border: none; border-radius: 12px; color: white; font-weight: bold;
             cursor: pointer; transition: transform 0.2s;
         }
         .detect-btn:hover { transform: translateY(-2px); }
-        .risk-score { font-size: 48px; font-weight: bold; text-align: center; margin: 15px 0; transition: all 0.3s; }
+        .risk-score { font-size: 48px; font-weight: bold; text-align: center; margin: 15px 0; }
         .status { text-align: center; font-size: 24px; margin: 10px 0; }
-        .reasons { background: #1f2937; padding: 15px; border-radius: 12px; margin-top: 20px; }
+        .reasons { background: #1f2937; padding: 15px; border-radius: 12px; margin-top: 20px; max-height: 400px; overflow-y: auto; }
         .reasons ul { list-style: none; padding-left: 0; }
         .reasons li { padding: 6px 0; border-bottom: 1px solid #374151; }
         .timeline { max-height: 300px; overflow-y: auto; }
@@ -105,6 +104,7 @@
         </div>
     </div>
 
+    <!-- Basic metrics -->
     <div class="cards-grid">
         <div class="card"><div class="card-title">Total Sessions</div><div class="card-value" id="totalSessions">{{ metrics.total_sessions }}</div></div>
         <div class="card"><div class="card-title">Suspicious Users</div><div class="card-value" id="suspiciousUsers">{{ metrics.suspicious_users }}</div></div>
@@ -112,6 +112,7 @@
         <div class="card"><div class="card-title">Avg Risk Score</div><div class="card-value" id="avgRiskScore">{{ metrics.avg_risk_score }}</div></div>
     </div>
 
+    <!-- Detection Panel -->
     <div class="two-columns">
         <div class="input-panel">
             <h2>🔍 Real-Time Detection</h2>
@@ -127,10 +128,11 @@
             <h2>📊 Detection Result</h2>
             <div class="risk-score" id="riskScore">--</div>
             <div class="status" id="status">--</div>
-            <div class="reasons"><strong>🔍 Explanation:</strong><ul id="reasonsList"><li>Waiting for detection...</li></ul></div>
+            <div class="reasons"><strong>🔍 Explanation & AI Model Metrics:</strong><ul id="reasonsList"><li>Waiting for detection...</li></ul></div>
         </div>
     </div>
 
+    <!-- Timeline & User Table -->
     <div class="two-columns">
         <div class="timeline-panel">
             <h2>⏱️ Behavior Timeline</h2>
@@ -153,20 +155,17 @@
 </div>
 
 <script>
-    // ---------- Global variables ----------
     let currentFilter = 'all';
     let allUsers = [];
     let riskChart = null;
 
-    // ---------- Helper: show error ----------
     function showError(msg) {
         const errDiv = document.getElementById('errorMsg');
         errDiv.textContent = msg;
         errDiv.style.display = 'block';
-        setTimeout(() => { errDiv.style.display = 'none'; }, 5000);
+        setTimeout(() => errDiv.style.display = 'none', 5000);
     }
 
-    // ---------- Load user table ----------
     async function loadUsers() {
         try {
             const res = await fetch('/api/users');
@@ -174,143 +173,90 @@
             const data = await res.json();
             allUsers = data.users;
             renderUserTable();
-        } catch(e) {
-            console.error('loadUsers error:', e);
-            showError('Failed to load user table: ' + e.message);
-        }
+        } catch(e) { showError('Failed to load user table: ' + e.message); }
     }
 
     function renderUserTable() {
-        let filtered = allUsers;
-        if (currentFilter !== 'all')
-            filtered = allUsers.filter(u => u.status === currentFilter);
+        let filtered = currentFilter === 'all' ? allUsers : allUsers.filter(u => u.status === currentFilter);
         const tbody = document.getElementById('userTableBody');
-        if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3">No users found</td></tr>';
-            return;
-        }
-        tbody.innerHTML = filtered.map(u => `
-            <tr>
-                <td>${u.user_id}</td>
-                <td>${u.risk_score}</td>
-                <td><span class="risk-badge risk-${u.status.toLowerCase()}">${u.status_icon} ${u.status}</span></td>
-            </tr>
-        `).join('');
+        if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="3">No users found</td></tr>'; return; }
+        tbody.innerHTML = filtered.map(u => `<tr><td>${u.user_id}</td><td>${u.risk_score}</td><td><span class="risk-badge risk-${u.status.toLowerCase()}">${u.status_icon} ${u.status}</span></td></tr>`).join('');
     }
 
-    // ---------- Add timeline entry ----------
     function addTimelineEntry(userId, screenTime, location, device, attempts, result) {
         const timelineDiv = document.getElementById('timelineContainer');
         const newEntry = document.createElement('div');
         newEntry.className = 'timeline-step';
-        newEntry.innerHTML = `
-            <div class="timeline-icon">🕒</div>
-            <div class="timeline-content">
-                <strong>${new Date().toLocaleTimeString()}</strong><br>
-                👤 User ${userId} | ⏰ ${screenTime}h | 📍 ${location} | 💻 ${device} | 🔐 ${attempts}<br>
-                🎯 Risk: ${result.risk_score} → ${result.status_icon} ${result.status}
-            </div>
-        `;
+        newEntry.innerHTML = `<div class="timeline-icon">🕒</div><div class="timeline-content"><strong>${new Date().toLocaleTimeString()}</strong><br>👤 User ${userId} | ⏰ ${screenTime}h | 📍 ${location} | 💻 ${device} | 🔐 ${attempts}<br>🎯 Risk: ${result.risk_score} → ${result.status_icon} ${result.status}</div>`;
         timelineDiv.insertBefore(newEntry, timelineDiv.firstChild);
-        // Keep last 10 entries
         while (timelineDiv.children.length > 11) timelineDiv.removeChild(timelineDiv.lastChild);
     }
 
-    // ---------- Detect anomaly ----------
     async function detectAnomaly() {
         const userId = document.getElementById('userId').value;
         const screenTime = parseFloat(document.getElementById('screenTime').value);
         const location = document.getElementById('location').value;
         const device = document.getElementById('device').value;
         const loginAttempts = parseInt(document.getElementById('loginAttempts').value);
-
-        const payload = {
-            user_id: userId,
-            screen_time: screenTime,
-            location: location,
-            device: device,
-            login_attempts: loginAttempts
-        };
-
         try {
-            const response = await fetch('/api/detect', {
+            const res = await fetch('/api/detect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ user_id: userId, screen_time: screenTime, location, device, login_attempts: loginAttempts })
             });
-            const result = await response.json();
-            if (!response.ok) {
-                throw new Error(result.error || `Server error: ${response.status}`);
-            }
-
-            // Update detection result
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || `Server error: ${res.status}`);
             const riskDiv = document.getElementById('riskScore');
             riskDiv.textContent = `${result.risk_score}/100`;
             riskDiv.style.color = result.risk_score < 30 ? '#22c55e' : (result.risk_score < 70 ? '#facc15' : '#ef4444');
             document.getElementById('status').innerHTML = `${result.status_icon} ${result.status}`;
-            const reasonsList = document.getElementById('reasonsList');
-            reasonsList.innerHTML = result.reasons.map(r => `<li>${r}</li>`).join('');
-
-            // Update user badge
             document.getElementById('userStatusBadge').innerHTML = `${result.status_icon} ${result.status}`;
-
-            // Add to timeline
+            
+            // Build explanation + performance metrics
+            let reasonsHtml = result.reasons.map(r => `<li>${r}</li>`).join('');
+            if (result.performance) {
+                const p = result.performance;
+                reasonsHtml += `
+                    <li style="margin-top: 12px; padding-top: 8px; border-top: 2px solid #a855f7; font-weight: bold;">📊 Model Performance Metrics (global evaluation)</li>
+                    <li>🎯 Accuracy: ${(p.accuracy * 100).toFixed(1)}%</li>
+                    <li>🔍 Precision: ${(p.precision * 100).toFixed(1)}%</li>
+                    <li>📈 Recall: ${(p.recall * 100).toFixed(1)}%</li>
+                    <li>⚡ F1 Score: ${(p.f1_score * 100).toFixed(1)}%</li>
+                    <li>📋 Confusion Matrix: TP=${p.true_positives}, TN=${p.true_negatives}, FP=${p.false_positives}, FN=${p.false_negatives}</li>
+                    <li>⚠️ False Positive Rate (Threat Rate): ${(p.false_positive_rate * 100).toFixed(1)}%</li>
+                    <li>🔢 Total Evaluated Sessions: ${p.total_samples}</li>
+                `;
+            }
+            document.getElementById('reasonsList').innerHTML = reasonsHtml;
+            
             addTimelineEntry(userId, screenTime, location, device, loginAttempts, result);
-
-            // Refresh metrics and user table
             refreshMetrics();
             loadUsers();
-
-        } catch (err) {
-            console.error('Detection error:', err);
-            showError('Detection failed: ' + err.message);
-        }
+        } catch(err) { showError('Detection failed: ' + err.message); }
     }
 
-    // ---------- Refresh metrics cards and chart ----------
     async function refreshMetrics() {
         try {
             const res = await fetch('/api/metrics');
-            if (!res.ok) throw new Error('Metrics fetch failed');
             const data = await res.json();
             document.getElementById('totalSessions').textContent = data.total_sessions;
             document.getElementById('suspiciousUsers').textContent = data.suspicious_users;
             document.getElementById('blockedUsers').textContent = data.blocked_users;
             document.getElementById('avgRiskScore').textContent = data.avg_risk_score;
-
-            // Update chart
             const distRes = await fetch('/api/risk_distribution');
             const dist = await distRes.json();
             if (riskChart) riskChart.destroy();
             const ctx = document.getElementById('riskChart').getContext('2d');
             riskChart = new Chart(ctx, {
                 type: 'bar',
-                data: {
-                    labels: ['Normal', 'Suspicious', 'Blocked'],
-                    datasets: [{
-                        label: 'Users',
-                        data: [dist.Normal, dist.Suspicious, dist.Blocked],
-                        backgroundColor: ['#22c55e', '#facc15', '#ef4444'],
-                        borderRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: { legend: { labels: { color: '#e5e7eb' } } }
-                }
+                data: { labels: ['Normal', 'Suspicious', 'Blocked'], datasets: [{ label: 'Users', data: [dist.Normal, dist.Suspicious, dist.Blocked], backgroundColor: ['#22c55e', '#facc15', '#ef4444'], borderRadius: 8 }] },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { labels: { color: '#e5e7eb' } } } }
             });
-        } catch(e) {
-            console.error('refreshMetrics error:', e);
-        }
+        } catch(e) { console.error(e); }
     }
 
-    // ---------- Export CSV ----------
-    function exportReport() {
-        window.location.href = '/export/report';
-    }
+    function exportReport() { window.location.href = '/export/report'; }
 
-    // ---------- Filter buttons ----------
     function setupFilters() {
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -322,15 +268,11 @@
         });
     }
 
-    // ---------- Initialisation ----------
     document.addEventListener('DOMContentLoaded', () => {
         setupFilters();
         loadUsers();
         refreshMetrics();
-        const detectBtn = document.getElementById('detectBtn');
-        if (detectBtn) detectBtn.addEventListener('click', detectAnomaly);
-        else console.error('Detect button not found');
-        // Auto-refresh every 15 seconds
+        document.getElementById('detectBtn').addEventListener('click', detectAnomaly);
         setInterval(() => { refreshMetrics(); loadUsers(); }, 15000);
     });
 </script>
