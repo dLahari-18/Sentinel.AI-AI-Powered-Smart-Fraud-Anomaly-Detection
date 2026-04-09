@@ -1,3 +1,4 @@
+import os  # <-- THIS WAS MISSING
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, Response
 import random
 import math
@@ -6,7 +7,7 @@ import io
 import traceback
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'fallback-secret-key')
+app.secret_key = os.environ.get('SECRET_KEY', 'sentinel-ai-secret-key-2024')  # now works
 
 # ---------- User database ----------
 users = {
@@ -22,19 +23,19 @@ def generate_dataset():
     unusual_locations = ['New York', 'London', 'Tokyo', 'Sydney']
     unusual_devices = ['tablet', 'unknown_device']
     data = []
-    for user_id in range(1, 51):               # 50 users
+    for user_id in range(1, 51):
         home_location = random.choice(locations)
         usual_device = random.choice(devices)
         usual_time = round(random.uniform(1, 4), 1)
         usual_attempts = random.randint(1, 2)
         num_sessions = random.randint(3, 6)
         for _ in range(num_sessions):
-            if random.random() < 0.9:          # 90% normal
+            if random.random() < 0.9:
                 screen_time = round(usual_time + random.gauss(0, 0.5), 1)
                 location = home_location
                 device = usual_device
                 login_attempts = usual_attempts + random.randint(0, 1)
-            else:                              # 10% anomalous
+            else:
                 screen_time = round(usual_time + random.uniform(3, 6), 1)
                 location = random.choice(unusual_locations)
                 device = random.choice(unusual_devices)
@@ -48,7 +49,7 @@ def generate_dataset():
             })
     return data
 
-df = generate_dataset()   # list of dicts
+df = generate_dataset()
 
 # ---------- Helper functions ----------
 def get_user_baseline(user_id):
