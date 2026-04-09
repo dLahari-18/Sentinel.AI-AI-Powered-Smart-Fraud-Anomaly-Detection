@@ -2,318 +2,110 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Sentinel.ai - Advanced Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel.ai - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #0a0f1c;
             color: #e5e7eb;
             padding: 20px;
         }
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        /* Headings - Exact spec */
-        h1 {
-            font-size: 36px;
-            font-weight: 800;
-            color: #3b82f6;
-        }
-        h2 {
-            font-size: 26px;
-            font-weight: 700;
-            color: #a855f7;
-        }
-        h3 {
-            font-size: 20px;
-            font-weight: 600;
-            color: #e5e7eb;
-        }
-        p, label, .card-title {
-            font-size: 16px;
-            color: #e5e7eb;
-        }
-        /* Status colors */
-        .status-normal {
-            color: #22c55e;
-        }
-        .status-suspicious {
-            color: #facc15;
-        }
-        .status-blocked {
-            color: #ef4444;
-        }
-        /* Header */
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { font-size: 36px; font-weight: 800; color: #3b82f6; }
+        h2 { font-size: 26px; font-weight: 700; color: #a855f7; margin-bottom: 20px; }
+        h3 { font-size: 20px; font-weight: 600; color: #e5e7eb; margin-bottom: 15px; }
         .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-            background: #111827;
-            padding: 20px 25px;
-            border-radius: 20px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 15px; background: #111827; padding: 20px 25px;
+            border-radius: 20px; margin-bottom: 30px; border: 1px solid rgba(59,130,246,0.2);
         }
-        .logo p {
-            font-size: 14px;
-            color: #9ca3af;
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
+        .user-info { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
         .status-badge, .export-btn, .logout-btn {
-            padding: 8px 16px;
-            border-radius: 30px;
-            font-weight: 500;
-            text-decoration: none;
-            transition: all 0.2s;
+            padding: 8px 16px; border-radius: 30px; font-weight: 500; text-decoration: none;
         }
-        .status-badge {
-            background: #1f2937;
-            color: #3b82f6;
-            border: 1px solid #3b82f6;
-        }
-        .export-btn {
-            background: #10b981;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        .export-btn:hover {
-            background: #059669;
-            transform: translateY(-2px);
-        }
-        .logout-btn {
-            background: #7f1a1a;
-            color: #fca5a5;
-            border: 1px solid #ef4444;
-        }
-        /* Cards */
+        .status-badge { background: #1f2937; color: #3b82f6; border: 1px solid #3b82f6; }
+        .export-btn { background: #10b981; color: white; border: none; cursor: pointer; }
+        .logout-btn { background: #7f1a1a; color: #fca5a5; border: 1px solid #ef4444; }
         .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px; margin-bottom: 30px;
         }
         .card {
-            background: #111827;
-            border-radius: 20px;
-            padding: 20px;
-            transition: all 0.3s;
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            background: #111827; border-radius: 20px; padding: 20px;
+            border: 1px solid rgba(59,130,246,0.2); transition: all 0.3s;
         }
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 20px rgba(59, 130, 246, 0.2);
-            border-color: #3b82f6;
-        }
-        .card-value {
-            font-size: 32px;
-            font-weight: bold;
-            color: #3b82f6;
-            margin-top: 8px;
-        }
-        /* Two columns */
+        .card:hover { transform: translateY(-5px); border-color: #3b82f6; }
+        .card-value { font-size: 32px; font-weight: bold; color: #3b82f6; margin-top: 8px; }
         .two-columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;
         }
-        /* Panels */
         .input-panel, .output-panel, .timeline-panel, .table-panel {
-            background: #111827;
-            border-radius: 20px;
-            padding: 25px;
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            background: #111827; border-radius: 20px; padding: 25px;
+            border: 1px solid rgba(59,130,246,0.2);
         }
-        .input-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
+        .input-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; }
         input, select {
-            width: 100%;
-            padding: 10px 12px;
-            background: #1f2937;
-            border: 1px solid #374151;
-            border-radius: 12px;
-            color: #e5e7eb;
+            width: 100%; padding: 10px 12px; background: #1f2937;
+            border: 1px solid #374151; border-radius: 12px; color: #e5e7eb;
             font-size: 14px;
         }
-        input:focus, select:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
-        }
+        input:focus, select:focus { outline: none; border-color: #3b82f6; }
         .detect-btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #3b82f6, #a855f7);
-            border: none;
-            border-radius: 12px;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
+            width: 100%; padding: 12px; background: linear-gradient(135deg, #3b82f6, #a855f7);
+            border: none; border-radius: 12px; color: white; font-weight: bold;
+            cursor: pointer; transition: transform 0.2s;
         }
-        .detect-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 14px rgba(59,130,246,0.4);
-        }
-        .risk-score {
-            font-size: 48px;
-            font-weight: bold;
-            text-align: center;
-            margin: 15px 0;
-            transition: all 0.3s;
-        }
-        .status {
-            text-align: center;
-            font-size: 24px;
-            margin: 10px 0;
-        }
-        .reasons {
-            background: #1f2937;
-            padding: 15px;
-            border-radius: 12px;
-            margin-top: 20px;
-        }
-        .reasons ul {
-            list-style: none;
-            padding-left: 0;
-        }
-        .reasons li {
-            padding: 6px 0;
-            border-bottom: 1px solid #374151;
-            color: #e5e7eb;
-        }
-        /* Vertical Timeline */
-        .timeline {
-            max-height: 350px;
-            overflow-y: auto;
-            padding-right: 10px;
-        }
-        .timeline-step {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            position: relative;
-        }
+        .detect-btn:hover { transform: translateY(-2px); }
+        .risk-score { font-size: 48px; font-weight: bold; text-align: center; margin: 15px 0; transition: all 0.3s; }
+        .status { text-align: center; font-size: 24px; margin: 10px 0; }
+        .reasons { background: #1f2937; padding: 15px; border-radius: 12px; margin-top: 20px; }
+        .reasons ul { list-style: none; padding-left: 0; }
+        .reasons li { padding: 6px 0; border-bottom: 1px solid #374151; }
+        .timeline { max-height: 300px; overflow-y: auto; }
+        .timeline-step { display: flex; gap: 15px; margin-bottom: 20px; position: relative; }
         .timeline-icon {
-            width: 40px;
-            height: 40px;
-            background: #1f2937;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            z-index: 2;
+            width: 40px; height: 40px; background: #1f2937; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
             border: 1px solid #3b82f6;
         }
-        .timeline-content {
-            flex: 1;
-            background: #1f2937;
-            padding: 12px;
-            border-radius: 12px;
-            font-size: 13px;
-        }
-        .timeline-step:not(:last-child)::before {
-            content: '';
-            position: absolute;
-            left: 19px;
-            top: 40px;
-            bottom: -20px;
-            width: 2px;
-            background: #3b82f6;
-        }
-        /* User Table */
-        .filter-bar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
+        .timeline-content { flex: 1; background: #1f2937; padding: 12px; border-radius: 12px; font-size: 13px; }
+        .filter-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
         .filter-btn {
-            padding: 6px 12px;
-            border-radius: 20px;
-            border: 1px solid #374151;
-            background: #1f2937;
-            color: #e5e7eb;
-            cursor: pointer;
-            transition: all 0.2s;
+            padding: 6px 12px; border-radius: 20px; border: 1px solid #374151;
+            background: #1f2937; color: #e5e7eb; cursor: pointer;
         }
-        .filter-btn.active {
-            background: #3b82f6;
-            color: white;
-            border-color: #3b82f6;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            text-align: left;
-            padding: 12px;
-            border-bottom: 1px solid #374151;
-        }
-        th {
-            background: #1f2937;
-            font-weight: 600;
-            color: #a855f7;
-        }
-        .risk-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
+        .filter-btn.active { background: #3b82f6; color: white; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #374151; }
+        th { background: #1f2937; color: #a855f7; }
+        .risk-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
         .risk-normal { background: #166534; color: #86efac; }
         .risk-suspicious { background: #92400e; color: #fde047; }
         .risk-blocked { background: #991b1b; color: #fca5a5; }
-        @media (max-width: 768px) {
-            .two-columns { grid-template-columns: 1fr; }
-            .header { flex-direction: column; text-align: center; }
-            .card-value { font-size: 24px; }
+        canvas { max-height: 200px; margin-top: 20px; }
+        .error-message {
+            background: #7f1a1a; color: #fca5a5; padding: 10px; border-radius: 8px;
+            margin-top: 15px; display: none; font-size: 14px;
         }
+        @media (max-width: 768px) { .two-columns { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <div class="logo">
-            <h1>🛡️ Sentinel.ai</h1>
-            <p>Behavior-Based Anomaly Detection</p>
-        </div>
+        <div><h1>🛡️ Sentinel.ai</h1><p style="color:#9ca3af;">Behavior-Based Anomaly Detection</p></div>
         <div class="user-info">
             <div class="status-badge" id="userStatusBadge">{{ username }} ({{ role }})</div>
-            <button class="export-btn" onclick="exportReport()">📥 Export CSV Report</button>
+            <button class="export-btn" onclick="exportReport()">📥 Export CSV</button>
             <a href="/logout" class="logout-btn">Logout</a>
         </div>
     </div>
 
-    <div class="cards-grid" id="metricsCards">
+    <div class="cards-grid">
         <div class="card"><div class="card-title">Total Sessions</div><div class="card-value" id="totalSessions">{{ metrics.total_sessions }}</div></div>
         <div class="card"><div class="card-title">Suspicious Users</div><div class="card-value" id="suspiciousUsers">{{ metrics.suspicious_users }}</div></div>
         <div class="card"><div class="card-title">Blocked Users</div><div class="card-value" id="blockedUsers">{{ metrics.blocked_users }}</div></div>
@@ -322,13 +114,14 @@
 
     <div class="two-columns">
         <div class="input-panel">
-            <h2>🔍 Real-Time Anomaly Detection</h2>
-            <div class="input-group"><label>User ID</label><select id="userId"><option value="1">User 1</option><option value="2">User 2</option><option value="3">User 3</option><option value="4">User 4</option></select></div>
+            <h2>🔍 Real-Time Detection</h2>
+            <div class="input-group"><label>User ID</label><select id="userId"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
             <div class="input-group"><label>Screen Time (hours)</label><input type="number" id="screenTime" step="0.5" value="2"></div>
             <div class="input-group"><label>Location</label><input type="text" id="location" value="Nellore"></div>
             <div class="input-group"><label>Device</label><select id="device"><option>mobile</option><option>laptop</option><option>desktop</option><option>tablet</option></select></div>
             <div class="input-group"><label>Login Attempts</label><input type="number" id="loginAttempts" value="1"></div>
-            <button class="detect-btn" onclick="detectAnomaly()">🚀 Detect Anomaly</button>
+            <button class="detect-btn" id="detectBtn">🚀 Detect Anomaly</button>
+            <div id="errorMsg" class="error-message"></div>
         </div>
         <div class="output-panel">
             <h2>📊 Detection Result</h2>
@@ -340,9 +133,9 @@
 
     <div class="two-columns">
         <div class="timeline-panel">
-            <h2>⏱️ Behavior Timeline (Live)</h2>
+            <h2>⏱️ Behavior Timeline</h2>
             <div class="timeline" id="timelineContainer">
-                <div class="timeline-step"><div class="timeline-icon">🔐</div><div class="timeline-content">Login → System Ready</div></div>
+                <div class="timeline-step"><div class="timeline-icon">🔐</div><div class="timeline-content">System ready – waiting for detection</div></div>
             </div>
         </div>
         <div class="table-panel">
@@ -353,28 +146,49 @@
                 <button class="filter-btn" data-filter="Suspicious">⚠️ Suspicious</button>
                 <button class="filter-btn" data-filter="Blocked">❌ Blocked</button>
             </div>
-            <div style="overflow-x: auto;"><table id="userTable"><thead><tr><th>User ID</th><th>Risk Score</th><th>Status</th></tr></thead><tbody id="userTableBody"><tr><td colspan="3">Loading...</td></tr></tbody></table></div>
-            <div style="margin-top: 20px;"><h3>📈 Risk Distribution</h3><canvas id="riskChart" style="max-height: 200px;"></canvas></div>
+            <div style="overflow-x: auto;"><table id="userTable"><thead><tr><th>User ID</th><th>Risk Score</th><th>Status</th></tr></thead><tbody id="userTableBody"><tr><td colspan="3">Loading...</td></tr></tbody>}</div>
+            <canvas id="riskChart"></canvas>
         </div>
     </div>
 </div>
 
 <script>
+    // ---------- Global variables ----------
     let currentFilter = 'all';
     let allUsers = [];
+    let riskChart = null;
 
+    // ---------- Helper: show error ----------
+    function showError(msg) {
+        const errDiv = document.getElementById('errorMsg');
+        errDiv.textContent = msg;
+        errDiv.style.display = 'block';
+        setTimeout(() => { errDiv.style.display = 'none'; }, 5000);
+    }
+
+    // ---------- Load user table ----------
     async function loadUsers() {
-        const res = await fetch('/api/users');
-        const data = await res.json();
-        allUsers = data.users;
-        renderUserTable();
+        try {
+            const res = await fetch('/api/users');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            allUsers = data.users;
+            renderUserTable();
+        } catch(e) {
+            console.error('loadUsers error:', e);
+            showError('Failed to load user table: ' + e.message);
+        }
     }
 
     function renderUserTable() {
         let filtered = allUsers;
-        if (currentFilter !== 'all') filtered = allUsers.filter(u => u.status === currentFilter);
+        if (currentFilter !== 'all')
+            filtered = allUsers.filter(u => u.status === currentFilter);
         const tbody = document.getElementById('userTableBody');
-        if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="3">No users found</td></tr>'; return; }
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3">No users found</td></tr>';
+            return;
+        }
         tbody.innerHTML = filtered.map(u => `
             <tr>
                 <td>${u.user_id}</td>
@@ -384,6 +198,7 @@
         `).join('');
     }
 
+    // ---------- Add timeline entry ----------
     function addTimelineEntry(userId, screenTime, location, device, attempts, result) {
         const timelineDiv = document.getElementById('timelineContainer');
         const newEntry = document.createElement('div');
@@ -392,77 +207,132 @@
             <div class="timeline-icon">🕒</div>
             <div class="timeline-content">
                 <strong>${new Date().toLocaleTimeString()}</strong><br>
-                👤 User ${userId} | ⏰ ${screenTime}h | 📍 ${location} | 💻 ${device}<br>
-                Risk: ${result.risk_score} → ${result.status_icon} ${result.status}
+                👤 User ${userId} | ⏰ ${screenTime}h | 📍 ${location} | 💻 ${device} | 🔐 ${attempts}<br>
+                🎯 Risk: ${result.risk_score} → ${result.status_icon} ${result.status}
             </div>
         `;
         timelineDiv.insertBefore(newEntry, timelineDiv.firstChild);
-        if (timelineDiv.children.length > 8) timelineDiv.removeChild(timelineDiv.lastChild);
+        // Keep last 10 entries
+        while (timelineDiv.children.length > 11) timelineDiv.removeChild(timelineDiv.lastChild);
     }
 
+    // ---------- Detect anomaly ----------
     async function detectAnomaly() {
         const userId = document.getElementById('userId').value;
         const screenTime = parseFloat(document.getElementById('screenTime').value);
         const location = document.getElementById('location').value;
         const device = document.getElementById('device').value;
         const loginAttempts = parseInt(document.getElementById('loginAttempts').value);
-        const payload = { user_id: userId, screen_time: screenTime, location, device, login_attempts };
+
+        const payload = {
+            user_id: userId,
+            screen_time: screenTime,
+            location: location,
+            device: device,
+            login_attempts: loginAttempts
+        };
 
         try {
-            const res = await fetch('/api/detect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            const result = await res.json();
-            if (result.error) { alert(result.error); return; }
+            const response = await fetch('/api/detect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error || `Server error: ${response.status}`);
+            }
 
+            // Update detection result
             const riskDiv = document.getElementById('riskScore');
-            riskDiv.style.opacity = '0';
-            setTimeout(() => {
-                riskDiv.textContent = `${result.risk_score}/100`;
-                riskDiv.style.color = result.risk_score < 30 ? '#22c55e' : (result.risk_score < 70 ? '#facc15' : '#ef4444');
-                riskDiv.style.opacity = '1';
-            }, 150);
+            riskDiv.textContent = `${result.risk_score}/100`;
+            riskDiv.style.color = result.risk_score < 30 ? '#22c55e' : (result.risk_score < 70 ? '#facc15' : '#ef4444');
             document.getElementById('status').innerHTML = `${result.status_icon} ${result.status}`;
             const reasonsList = document.getElementById('reasonsList');
             reasonsList.innerHTML = result.reasons.map(r => `<li>${r}</li>`).join('');
+
+            // Update user badge
             document.getElementById('userStatusBadge').innerHTML = `${result.status_icon} ${result.status}`;
 
+            // Add to timeline
             addTimelineEntry(userId, screenTime, location, device, loginAttempts, result);
+
+            // Refresh metrics and user table
             refreshMetrics();
             loadUsers();
-        } catch (err) { console.error(err); alert('Detection failed'); }
+
+        } catch (err) {
+            console.error('Detection error:', err);
+            showError('Detection failed: ' + err.message);
+        }
     }
 
+    // ---------- Refresh metrics cards and chart ----------
     async function refreshMetrics() {
-        const res = await fetch('/api/metrics');
-        const data = await res.json();
-        document.getElementById('totalSessions').textContent = data.total_sessions;
-        document.getElementById('suspiciousUsers').textContent = data.suspicious_users;
-        document.getElementById('blockedUsers').textContent = data.blocked_users;
-        document.getElementById('avgRiskScore').textContent = data.avg_risk_score;
-        const distRes = await fetch('/api/risk_distribution');
-        const dist = await distRes.json();
-        if (window.riskChart) window.riskChart.destroy();
-        const ctx = document.getElementById('riskChart').getContext('2d');
-        window.riskChart = new Chart(ctx, {
-            type: 'bar',
-            data: { labels: ['Normal', 'Suspicious', 'Blocked'], datasets: [{ label: 'Users', data: [dist.Normal, dist.Suspicious, dist.Blocked], backgroundColor: ['#22c55e', '#facc15', '#ef4444'], borderRadius: 8 }] },
-            options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { labels: { color: '#e5e7eb' } } } }
+        try {
+            const res = await fetch('/api/metrics');
+            if (!res.ok) throw new Error('Metrics fetch failed');
+            const data = await res.json();
+            document.getElementById('totalSessions').textContent = data.total_sessions;
+            document.getElementById('suspiciousUsers').textContent = data.suspicious_users;
+            document.getElementById('blockedUsers').textContent = data.blocked_users;
+            document.getElementById('avgRiskScore').textContent = data.avg_risk_score;
+
+            // Update chart
+            const distRes = await fetch('/api/risk_distribution');
+            const dist = await distRes.json();
+            if (riskChart) riskChart.destroy();
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            riskChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Normal', 'Suspicious', 'Blocked'],
+                    datasets: [{
+                        label: 'Users',
+                        data: [dist.Normal, dist.Suspicious, dist.Blocked],
+                        backgroundColor: ['#22c55e', '#facc15', '#ef4444'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { labels: { color: '#e5e7eb' } } }
+                }
+            });
+        } catch(e) {
+            console.error('refreshMetrics error:', e);
+        }
+    }
+
+    // ---------- Export CSV ----------
+    function exportReport() {
+        window.location.href = '/export/report';
+    }
+
+    // ---------- Filter buttons ----------
+    function setupFilters() {
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.getAttribute('data-filter');
+                renderUserTable();
+            });
         });
     }
 
-    function exportReport() { window.location.href = '/export/report'; }
-
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentFilter = btn.getAttribute('data-filter');
-            renderUserTable();
-        });
+    // ---------- Initialisation ----------
+    document.addEventListener('DOMContentLoaded', () => {
+        setupFilters();
+        loadUsers();
+        refreshMetrics();
+        const detectBtn = document.getElementById('detectBtn');
+        if (detectBtn) detectBtn.addEventListener('click', detectAnomaly);
+        else console.error('Detect button not found');
+        // Auto-refresh every 15 seconds
+        setInterval(() => { refreshMetrics(); loadUsers(); }, 15000);
     });
-
-    setInterval(() => { refreshMetrics(); loadUsers(); }, 10000);
-    loadUsers();
-    refreshMetrics();
 </script>
 </body>
 </html>
