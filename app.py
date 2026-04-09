@@ -1,7 +1,9 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, Response
-import pandas as pd
-import numpy as np
+import csv
 import os
+import random
+import math
+from collections import defaultdict
 import io
 
 app = Flask(__name__)
@@ -17,62 +19,85 @@ users = {
 
 DATASET_PATH = 'dataset.csv'
 
+# ---------- Helper: Generate synthetic dataset (no pandas) ----------
 def generate_large_dataset(num_users=50):
-    """Generate synthetic dataset with many users for scalable demo"""
-    np.random.seed(42)
-    data = []
-    for user_id in range(1, num_users + 1):
-        num_sessions = np.random.randint(3, 7)
-        home_location = np.random.choice(['Nellore', 'Hyderabad', 'Mumbai', 'Delhi', 'Bangalore', 'Chennai'])
-        usual_device = np.random.choice(['mobile', 'laptop', 'desktop'])
-        usual_time = np.random.uniform(1, 4)
-        usual_attempts = np.random.randint(1, 3)
+    """Generate CSV with user sessions using pure Python"""
+    locations = ['Nellore', 'Hyderabad', 'Mumbai', 'Delhi', 'Bangalore', 'Chennai']
+    devices = ['mobile', 'laptop', 'desktop']
+    unusual_locations = ['New York', 'London', 'Tokyo', 'Sydney']
+    unusual_devices = ['tablet', 'unknown_device']
+    
+    with open(DATASET_PATH, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['user_id', 'screen_time', 'location', 'device', 'login_attempts'])
         
-        for _ in range(num_sessions):
-            if np.random.random() < 0.9:
-                screen_time = usual_time + np.random.normal(0, 0.5)
-                location = home_location
-                device = usual_device
-                login_attempts = usual_attempts + np.random.randint(0, 1)
-            else:
-                screen_time = usual_time + np.random.uniform(3, 6)
-                location = np.random.choice(['New York', 'London', 'Tokyo', 'Sydney'])
-                device = np.random.choice(['tablet', 'unknown_device'])
-                login_attempts = usual_attempts + np.random.randint(2, 5)
+        for user_id in range(1, num_users + 1):
+            # Normal behaviour baseline
+            home_location = random.choice(locations)
+            usual_device = random.choice(devices)
+            usual_time = round(random.uniform(1, 4), 1)
+            usual_attempts = random.randint(1, 2)
+            num_sessions = random.randint(3, 6)
             
-            data.append({
-                'user_id': user_id,
-                'screen_time': round(screen_time, 1),
-                'location': location,
-                'device': device,
-                'login_attempts': min(login_attempts, 5)
-            })
-    df = pd.DataFrame(data)
-    df.to_csv(DATASET_PATH, index=False)
-    return df
+            for _ in range(num_sessions):
+                # 90% normal, 10% anomalous
+                if random.random() < 0.9:
+                    screen_time = round(usual_time + random.gauss(0, 0.5), 1)
+                    location = home_location
+                    device = usual_device
+                    login_attempts = usual_attempts + random.randint(0, 1)
+                else:
+                    screen_time = round(usual_time + random.uniform(3, 6), 1)
+                    location = random.choice(unusual_locations)
+                    device = random.choice(unusual_devices)
+                    login_attempts = usual_attempts + random.randint(2, 4)
+                
+                writer.writerow([user_id, screen_time, location, device, min(login_attempts, 5)])
+    
+    return True
 
 def load_dataset():
-    if os.path.exists(DATASET_PATH):
-        return pd.read_csv(DATASET_PATH)
-    else:
-        return generate_large_dataset(50)
+    """Load CSV into memory as list of dicts (no pandas)"""
+    if not os.path.exists(DATASET_PATH):
+        generate_large_dataset(50)  # create with 50 users
+    
+    data = []
+    with open(DATASET_PATH, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            row['user_id'] = int(row['user_id'])
+            row['screen_time'] = float(row['screen_time'])
+            row['login_attempts'] = int(row['login_attempts'])
+            data.append(row)
+    return data
 
-df = load_dataset()
+df = load_dataset()  # list of dicts
 
+# ---------- User baseline calculation (pure Python) ----------
 def get_user_baseline(user_id):
-    user_data = df[df['user_id'] == user_id]
-    if len(user_data) == 0:
+    user_rows = [row for row in df if row['user_id'] == user_id]
+    if not user_rows:
         return None
-    mean_time = user_data['screen_time'].mean()
-    std_time = user_data['screen_time'].std()
-    if std_time == 0:
-        std_time = 0.5
-    common_location = user_data['location'].mode()[0] if len(user_data['location'].mode()) > 0 else "Unknown"
-    known_devices = set(user_data['device'].unique())
-    mean_attempts = user_data['login_attempts'].mean()
-    std_attempts = user_data['login_attempts'].std()
-    if std_attempts == 0:
-        std_attempts = 0.5
+    
+    times = [row['screen_time'] for row in user_rows]
+    locations = [row['location'] for row in user_rows]
+    devices = [row['device'] for row in user_rows]
+    attempts = [row['login_attempts'] for row in user_rows]
+    
+    # Mean & std for time
+    mean_time = sum(times) / len(times)
+    variance = sum((t - mean_time) ** 2 for t in times) / len(times)
+    std_time = math.sqrt(variance) if variance > 0 else 0.5
+    
+    # Most common location
+    from collections import Counter
+    common_location = Counter(locations).most_common(1)[0][0]
+    known_devices = set(devices)
+    
+    mean_attempts = sum(attempts) / len(attempts)
+    var_attempts = sum((a - mean_attempts) ** 2 for a in attempts) / len(attempts)
+    std_attempts = math.sqrt(var_attempts) if var_attempts > 0 else 0.5
+    
     return {
         'mean_screen_time': mean_time,
         'std_screen_time': std_time,
@@ -80,29 +105,34 @@ def get_user_baseline(user_id):
         'known_devices': known_devices,
         'mean_login_attempts': mean_attempts,
         'std_login_attempts': std_attempts,
-        'session_count': len(user_data)
+        'session_count': len(user_rows)
     }
 
 def calculate_risk_and_explanation(user_id, screen_time, location, device, login_attempts):
     baseline = get_user_baseline(user_id)
     if baseline is None:
         return None, "User not found"
+    
     risk_score = 0
     reasons = []
     
+    # Time anomaly
     time_threshold = baseline['mean_screen_time'] + baseline['std_screen_time'] * 1.2
     if screen_time > time_threshold:
         risk_score += 20
         reasons.append(f"⏰ Session duration unusually high ({screen_time}h vs normal {baseline['mean_screen_time']:.1f}h)")
     
+    # Location anomaly
     if location != baseline['common_location']:
         risk_score += 30
         reasons.append(f"📍 Location changed from usual ({baseline['common_location']} to {location})")
     
+    # Device anomaly
     if device not in baseline['known_devices']:
         risk_score += 15
         reasons.append(f"💻 New device detected ({device}) - not in usual devices")
     
+    # Login attempts anomaly
     attempts_threshold = baseline['mean_login_attempts'] + baseline['std_login_attempts']
     if login_attempts > attempts_threshold:
         risk_score += 20
@@ -132,15 +162,19 @@ def calculate_risk_and_explanation(user_id, screen_time, location, device, login
     }, None
 
 def get_all_users_risk():
+    """Compute risk for each user using their last session"""
     users_risk = {}
-    for user_id in df['user_id'].unique():
-        user_data = df[df['user_id'] == user_id].iloc[-1]
+    # Get unique user ids
+    user_ids = set(row['user_id'] for row in df)
+    for uid in user_ids:
+        # get last session for this user
+        user_rows = [row for row in df if row['user_id'] == uid]
+        last = user_rows[-1]
         result, _ = calculate_risk_and_explanation(
-            user_id, user_data['screen_time'], user_data['location'], 
-            user_data['device'], user_data['login_attempts']
+            uid, last['screen_time'], last['location'], last['device'], last['login_attempts']
         )
         if result:
-            users_risk[user_id] = result
+            users_risk[uid] = result
     return users_risk
 
 def get_overall_metrics():
@@ -150,17 +184,19 @@ def get_overall_metrics():
     for data in users_risk.values():
         all_risks.append(data['risk_score'])
         classifications[data['status']] += 1
+    avg_risk = sum(all_risks) / len(all_risks) if all_risks else 0
     metrics = {
         'total_sessions': len(df),
         'suspicious_users': classifications['Suspicious'],
         'blocked_users': classifications['Blocked'],
-        'avg_risk_score': round(np.mean(all_risks), 2) if all_risks else 0,
+        'avg_risk_score': round(avg_risk, 2),
         'normal_count': classifications['Normal'],
         'suspicious_count': classifications['Suspicious'],
         'blocked_count': classifications['Blocked']
     }
     return metrics
 
+# ---------- Flask Routes ----------
 @app.route('/')
 def login():
     if 'username' in session:
@@ -174,7 +210,7 @@ def auth():
     if username in users and users[username]['password'] == password:
         session['username'] = username
         session['role'] = users[username]['role']
-        session['user_id'] = 1
+        session['user_id'] = 1  # demo user
         flash(f'Welcome back, {username}!', 'success')
         return redirect(url_for('dashboard'))
     else:
